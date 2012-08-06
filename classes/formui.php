@@ -1870,6 +1870,11 @@ class FormControlSelect extends FormControl
 	public function get( $forvalidation = true )
 	{
 		$theme = $this->get_theme( $forvalidation );
+
+		foreach ( $this->properties as $prop => $value ) {
+			$theme->$prop = $value;
+		}
+
 		$theme->options = $this->options;
 		$theme->multiple = $this->multiple;
 		$theme->size = $this->size;
