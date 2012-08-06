@@ -59,13 +59,6 @@
 		</div>
 	</div>
 
-	<?php if ( isset( $active_theme['info']->help ) ): ?>
-	<div id="themehelp" class="item clear<?php if( Controller::get_var('help') == $active_theme['dir'] ): ?> active<?php endif; ?>">
-		<h3><?php _e( "Help" ); ?></h3>
-		<div class="help"><?php echo (string) $active_theme['info']->help->value; ?></div>
-	</div>
-	<?php endif; ?>
-
 	<?php
 	// Capture the admin config output.  If nothing is there, don't output the section
 	ob_start();

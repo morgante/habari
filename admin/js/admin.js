@@ -126,34 +126,11 @@ var dashboard = {
 			}
 		);
 	},
-	updateModule: function( form ) {
+	updateModule: function() {
 		//spinner.start();
 		// disable dragging and dropping while we update
 		// here we would update the modules options then
 		// reload the modules
-		
-		// still a work in progress
-		
-		// var query = {};
-		// 		query.options = {};
-		// 		query.slugger = $(form).parents('li').attr('id');
-		// 				
-		// 		query.options[ 'moduleID' ]= $(this).parents('li').attr('id');
-		// 		
-		// 		$('input', form).each( function() {
-		// 			query.options[ $(this).attr('name') ] = $(this).val();
-		// 		});
-		// 		
-		// 		query.action = 'updateModule';
-		// 		habari_ajax.post(
-		// 			habari.url.ajaxDashboard,
-		// 			query,
-		// 			function() {
-		// 				console.log( 'done' );
-		// 			}
-		// 		);
-		
-		return true;
 	},
 	add: function() {
 		spinner.start();

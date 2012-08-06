@@ -68,68 +68,13 @@ class AdminDashboardHandler extends AdminHandler
 	 */
 	public function get_additem_form()
 	{
-		if ( count( Modules::get_all() ) == 0 ) {
-			$this->theme->modules = array();
-			return;
-		}
-
-		// get the active module list
-		$modules = Modules::get_active();
-
-		if ( User::identify()->can( 'manage_dash_modules' ) ) {
-			// append the 'Add Item' module
-			$modules['nosort'] = 'Add Item';
-
-			// register the 'Add Item' filter
-			Plugins::register( array( $this, 'filter_dash_module_add_item' ), 'filter', 'dash_module_add_item' );
-		}
-
-		foreach ( $modules as $id => $module_name ) {
-			$modules[$id] = $this->get_module( $id, $module_name );
-		}
-
-		$this->theme->modules = $modules;
-
-	}
-	
-	/**
-	 * A simple helper to build out a module
-	 */
-	private function get_module( $id, $module_name )
-	{		
-		$slug = Utils::slugify( (string) $module_name, '_' );
-		$module = array(
-			'name' => $module_name,
-			'title' => $module_name,
-			'content' => ''
-			);
-			
-		$module['options'] = new FormUI( 'dash_module_options_' . $id );
-		$module['options']->ajax = true;
-		$module['options']->append( 'hidden', 'module_id', 'null:null' );
-		$module['options']->module_id->id = 'module_id';
-		$module['options']->module_id->value = $id;
-		$module['options']->append( 'submit', 'save', _t('Save') );
-		
-		$module = Plugins::filter( 'dash_module_' . $slug, $module, $id, $this->theme );
-		
-		if( $module['options'] instanceof FormUI )
-		{
-			if( count($module['options']->controls) > 1 )
-			{				
-				// we've added controls, so display the options form
-				$module['form'] = $module['options'];
-				$module['options'] = $module['options']->get();
-			}
-			else
-			{
-				// we haven't done anything, so there are no options
-				$module['options'] = false;
-			}
-			
-		}
-		
-		return $module;
+		$additem_form = new FormUI( 'dash_additem' );
+		$additem_form->append( 'select', 'module', 'null:unused' );
+		$additem_form->module->options = Plugins::filter( 'dashboard_block_list', array() );
+		$additem_form->append( 'submit', 'submit', _t( '+' ) );
+		//$form->on_success( array( $this, 'dash_additem' ) );
+		$additem_form->properties['onsubmit'] = "dashboard.add(); return false;";
+		$this->theme->additem_form = $additem_form->get();
 	}
 
 	/**
@@ -152,15 +97,6 @@ class AdminDashboardHandler extends AdminHandler
 					DB::query('UPDATE {blocks_areas} SET display_order = :display_order WHERE block_id = :id AND area = "dashboard"', array('display_order' => $order, 'id' => $module));
 				}
 				$ar = new AjaxResponse( 200, _t( 'Modules updated.' ) );
-				break;
-			case 'updateModule':
-				$slugger = explode( ':', $handler_vars['slugger'], 2);
-				
-				$module = $this->get_module( $slugger[0], $slugger[1] );
-				
-				print_r( $module['form']->content );
-				
-				$ar = new AjaxResponse( 200, _t( 'Module updated.' ) );
 				break;
 			case 'addModule':
 				$type = $handler_vars['module_name'];
