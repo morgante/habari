@@ -1203,8 +1203,8 @@ class FormControl extends FormComponents
 			$location = array_shift( $storage );
 		}
 		else {
+			// Dunno what was intended here, but it wasn't a valid/known storage option, so store nothing
 			$type = 'null';
-			EventLog::log(_('Unknown storage type "%1$s" specified for saved form %2$s.', array(gettype($storage), $this->name)), 'err');
 		}
 
 		switch ( $type ) {
