@@ -619,6 +619,8 @@ class Theme extends Pluggable
 	public function theme_footer( $theme )
 	{
 		Plugins::act( 'template_footer', $theme );
+		Stack::dependent('template_footer_javascript', 'template_header_javascript');
+		Stack::dependent('template_footer_stylesheet', 'template_stylesheet');
 		$output = Stack::get( 'template_footer_stylesheet', array( 'Stack', 'styles' ) );
 		$output .= Stack::get( 'template_footer_javascript', array( 'Stack', 'scripts' ) );
 		return $output;
@@ -647,7 +649,6 @@ class Theme extends Pluggable
 		$content_types = array_flip( $content_types );
 		if ( isset( $context ) ) {
 			foreach ( $content_types as $type => $type_id ) {
-				$content_type = $context . $object->content_type();
 				$fallback[] = strtolower( $context . '.' . $type );
 			}
 		}
@@ -815,7 +816,7 @@ class Theme extends Pluggable
 	 *
 	 * @param string $text text to display for link
 	 */
-	public function theme_prev_page_link( $theme, $text = null )
+	public function theme_prev_page_link( $theme, $text = null, $classes = array( 'prev-page' ) )
 	{
 		$settings = array();
 
@@ -830,7 +831,7 @@ class Theme extends Pluggable
 			$text = '&larr; ' . _t( 'Previous' );
 		}
 
-		return '<a class="prev-page" href="' . URL::get( null, $settings, false ) . '" title="' . $text . '">' . $text . '</a>';
+		return '<a class="' . implode( ' ', $classes ) . '" href="' . URL::get( null, $settings, false ) . '" title="' . $text . '">' . $text . '</a>';
 	}
 
 	/**
@@ -838,7 +839,7 @@ class Theme extends Pluggable
 	 *
 	 * @param string $text text to display for link
 	 */
-	public function theme_next_page_link( $theme, $text = null )
+	public function theme_next_page_link( $theme, $text = null, $classes = array( 'next-page' ) )
 	{
 		$settings = array();
 
@@ -857,7 +858,7 @@ class Theme extends Pluggable
 			$text = _t( 'Next' ) . ' &rarr;';
 		}
 
-		return '<a class="next-page" href="' . URL::get( null, $settings, false ) . '" title="' . $text . '">' . $text . '</a>';
+		return '<a class="' . implode( ' ', $classes ) . '" href="' . URL::get( null, $settings, false ) . '" title="' . $text . '">' . $text . '</a>';
 	}
 
 	/**
@@ -1494,6 +1495,20 @@ class Theme extends Pluggable
 	{
 		$this->template_engine->add_template($name, $file, $replace);
 	}
+
+	/**
+	 * Provide default Habari features for curious plugins
+	 * @param array $provided Features already collected from interrogated plugins
+	 * @return array Plugin Features plus Habari Features
+	 */
+	public static function filter_provided( $provided = array() ) {
+		foreach( array( Version::HABARI_MAJOR_MINOR, DB::get_driver_name(),
+			) as $feature ) {
+			$provided[ $feature ] = array( "Habari" );
+		}
+		return $provided;
+	}
+
 
 }
 ?>

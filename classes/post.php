@@ -23,6 +23,7 @@
  * @property string $guid The globally-unique identifier for this post
  * @property string $content The content of this post
  * @property string $cached_content Nobody really knows what this is for
+ * @property string $input_formats A comma-separated list of descriptors of the stored format of this post content
  * @property integer $user_id The User id of the author of this post
  * @property integer $status The integer status of this post
  * @property HabariDateTime $pubdate The published date of this post
@@ -366,6 +367,7 @@ class Post extends QueryRecord implements IsContent, FormStorage
 			'guid' => '',
 			'content' => '',
 			'cached_content' => '',
+			'input_formats' => '',
 			'user_id' => 0,
 			'status' => Post::status( 'draft' ),
 			'pubdate' => HabariDateTime::date_create(),
@@ -1682,7 +1684,7 @@ class Post extends QueryRecord implements IsContent, FormStorage
 	 */
 	public function field_save( $key, $value )
 	{
-		$this->info->$key = $value;
+		$this->info->$key = Plugins::filter('post_field_save', $value, $key);
 		$this->info->commit();
 	}
 
@@ -1694,7 +1696,7 @@ class Post extends QueryRecord implements IsContent, FormStorage
 	 * @return mixed The stored value returned
 	 */
 	function field_load( $key ) {
-		return $this->info->$key;
+		return Plugins::filter('post_field_load', $this->info->$key, $key);
 	}
 }
 ?>

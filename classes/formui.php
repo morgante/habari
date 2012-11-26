@@ -218,7 +218,7 @@ class FormContainer extends FormComponents
 		$theme->caption = $this->caption;
 		$theme->control = $this;
 
-		return $theme->fetch( $this->template, true );
+		return $this->prefix . $theme->fetch( $this->template, true ) . $this->postfix;
 	}
 
 	/**
@@ -619,6 +619,8 @@ class FormUI extends FormContainer implements IsContent
 		$this->success = false;
 		$this->submitted = false;
 
+		$this->properties['id'] = isset($this->properties['id']) ? $this->properties['id'] : Utils::slugify( $this->name );
+
 		// Should we be validating?
 		if ( isset( $_POST['FormUI'] ) && $_POST['FormUI'] == $this->salted_name() ) {
 			$this->submitted = true;
@@ -637,12 +639,12 @@ class FormUI extends FormContainer implements IsContent
 			else {
 				$forvalidation = true;
 				if ( !isset( $_SESSION['forms'][$this->salted_name()]['url'] ) ) {
-					$_SESSION['forms'][$this->salted_name()]['url'] = Site::get_url( 'habari', true ) . Controller::get_stub();
+					$_SESSION['forms'][$this->salted_name()]['url'] = Site::get_url( 'habari', true ) . Controller::get_stub() . '#' . $this->properties['id'];
 				}
 			}
 		}
 		else {
-			$_SESSION['forms'][$this->salted_name()]['url'] = Site::get_url( 'habari', true ) . Controller::get_stub();
+			$_SESSION['forms'][$this->salted_name()]['url'] = Site::get_url( 'habari', true ) . Controller::get_stub() . '#' . $this->properties['id'];
 		}
 		if ( isset( $_SESSION['forms'][$this->salted_name()]['error_data'] ) ) {
 			foreach ( $_SESSION['forms'][$this->salted_name()]['error_data'] as $key => $value ) {
@@ -661,7 +663,6 @@ class FormUI extends FormContainer implements IsContent
 			$theme->$prop = $value;
 		}
 
-		$this->properties['id'] = isset($this->properties['id']) ? $this->properties['id'] : Utils::slugify( $this->name );
 		$theme->class = Utils::single_array( $this->class );
 		$this->action = $this->options['form_action'];
 		$theme->salted_name = $this->salted_name();
@@ -1109,7 +1110,18 @@ class FormControl extends FormComponents
 	 */
 	public function checksum()
 	{
-		$storage = is_object( $this->storage ) ? gettype( $this->storage ) : $this->storage;
+		if ( is_array( $this->storage ) ) {
+			$storage = reset($this->storage);
+		}
+		else if ( is_object( $this->storage ) ) {
+			$storage = get_class($this->storage);
+		}
+		else if ( is_scalar( $this->storage ) ) {
+			$storage = $this->storage;
+		}
+		else {
+			$storage = 'unknown';
+		}
 		return md5( $this->name . $storage . $this->caption );
 	}
 
@@ -1607,6 +1619,17 @@ class FormControlNoSave extends FormControl
 	{
 		// This function should do nothing.
 	}
+
+	/**
+	 * Return a checksum representing this control
+	 *
+	 * @return string A checksum
+	 */
+	public function checksum()
+	{
+		return md5($this->name . 'static');
+	}
+
 }
 
 /**
@@ -1787,6 +1810,13 @@ class FormControlPassword extends FormControlText
 	public function get( $forvalidation = true )
 	{
 		$theme = $this->get_theme( $forvalidation );
+		foreach ( $this->properties as $prop => $value ) {
+			$theme->$prop = $value;
+		}
+
+		$theme->caption = $this->caption;
+		$theme->id = $this->name;
+		$theme->control = $this;
 		$theme->outvalue = $this->value == '' ? '' : substr( md5( $this->value ), 0, 8 );
 
 		return $theme->fetch( $this->get_template(), true );

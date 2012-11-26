@@ -44,7 +44,11 @@ class CoreDashModules extends Plugin
 	 */
 	public function filter_dashboard_block_list($block_list)
 	{
-		return $this->filter_block_list($block_list);
+		$block_list['latest_entries'] = _t( 'Latest Entries');
+		$block_list['latest_comments'] = _t( 'Latest Comments');
+		$block_list['latest_log_activity'] = _t( 'Latest Log Activity');
+		$block_list['post_types_statuses'] = _t( 'Post Types and Statuses');
+		return $block_list;
 	}
 
 	/**
@@ -95,9 +99,12 @@ class CoreDashModules extends Plugin
 	 */
 	public function action_block_content_latest_comments($block, $theme)
 	{
-		$posts = DB::get_results( 'SELECT * FROM {posts} p WHERE p.id in ( SELECT post_id FROM {comments} WHERE status = ? AND type = ? ORDER BY date DESC, post_id ) LIMIT 5', array( Comment::STATUS_APPROVED, Comment::COMMENT ), 'Post' );
-		$latestcomments = array();
+		$comment_types = array( Comment::COMMENT );
+		$query = 'SELECT {posts}.* FROM {comments}, {posts} WHERE {posts}.status = ? AND {comments}.status = ? AND ({comments}.type = ?' . str_repeat(' OR {comments}.type = ?', count($comment_types) - 1) . ') AND {posts}.id = post_id ORDER BY {comments}.date DESC LIMIT 25';
+		$query_args = array_merge( array( Post::status( 'published' ), Comment::STATUS_APPROVED ), $comment_types );
+		$posts = DB::get_results( $query, $query_args, 'Post' );
 
+		$latestcomments = array();
 		foreach( $posts as $post ) {
 			$comments = DB::get_results( 'SELECT * FROM {comments} WHERE post_id = ? AND status = ? AND type = ? ORDER BY date DESC LIMIT 5;', array( $post->id, Comment::STATUS_APPROVED, Comment::COMMENT ), 'Comment' );
 			$latestcomments[$post->id] = $comments;
@@ -244,10 +251,7 @@ class CoreDashModules extends Plugin
 	}
 
 	/**
-	* Adds the podcast stylesheet to the admin header,
-	* Adds menu items to the Habari silo for mp3 files
-	* for each feed so the mp3 can be added to multiple 
-	* feeds.
+	* Adds the stylesheet to the admin header only on the dashboard.
 	*
 	* @param Theme $theme The current theme being used.
 	*/
@@ -255,7 +259,7 @@ class CoreDashModules extends Plugin
 	{
 		$vars = Controller::get_handler_vars();
 		if( 'dashboard' == $theme->page ) {
-			Stack::add( 'admin_stylesheet', array( $this->get_url() . '/coredashmodules.css', 'screen' ), 'coredashmodules', array( 'admin' ) );
+			Stack::add( 'admin_stylesheet', array( $this->get_url() . '/coredashmodules.css', 'screen' ), 'coredashmodules', array( 'admin-css' ) );
 		}
 	}
 

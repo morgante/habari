@@ -565,7 +565,7 @@ class Plugins
 		else {
 			$short_file = MultiByte::substr( $file, strlen( HABARI_PATH ) );
 		}
-//Utils::debug($stream, $file);die();
+
 		$activated = Options::get( 'active_plugins' );
 		if ( !is_array( $activated ) || !in_array( $short_file, $activated ) ) {
 			include_once( $file );
@@ -649,7 +649,7 @@ class Plugins
 	public static function changed_since_last_activation()
 	{
 		$old_plugins = Options::get( 'plugins_present' );
-		//self::set_present();
+
 		// If the plugin list was never stored, then they've changed.
 		if ( !is_array( $old_plugins ) ) {
 			return true;
@@ -744,13 +744,13 @@ class Plugins
 
 		return ( count( $failed_plugins ) > 0 ) ? false : true;
 	}
-	
+
 	/**
 	 * Produce the UI for a plugin based on the user's selected config option
-	 * 
+	 *
 	 * @param string $configure The id of the configured plugin
 	 * @param string $configuration The selected configuration option
-	 **/	 	 	 	 	
+	 **/
 	public static function plugin_ui( $configure, $configaction )
 	{
 		Plugins::act_id( 'plugin_ui_' . $configaction, $configure, $configure, $configaction );
@@ -774,8 +774,7 @@ class Plugins
 				}
 			}
 		}
-
-		return $provided;
+		return Plugins::filter( 'provided', $provided );
 	}
 }
 

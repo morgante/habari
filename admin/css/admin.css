@@ -1242,7 +1242,7 @@ body.page-publish .buttons input {
 	width: 16px;
 	background: url('../images/closebutton.png') center center no-repeat;
 	cursor: pointer;
-	z-index: 1500;
+	z-index: 56;
 }
 
 .dashboard .module .options {
@@ -2769,6 +2769,16 @@ body.login input[type=text], body.login input[type=password], body.login label.o
 	-moz-box-shadow: 0 0 20px #ddd;
 }
 
+body.login input:-moz-placeholder {
+	color: #cccccc;
+}
+body.login input:-ms-input-placeholder {
+	color: #cccccc;
+}
+body.login input::-webkit-input-placeholder {
+	color: #cccccc;
+}
+
 body.login label.overcontent {
 	text-transform: lowercase;
 	color: #aeaeae;
@@ -2788,8 +2798,8 @@ body.login .remember label {
 
 body.login input[type=submit] {
 	float: right;
-	width: 100px;
 	margin-right: -1px;
+	width: 12em;
 }
 
 body.login #password_utils {

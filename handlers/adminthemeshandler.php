@@ -333,7 +333,15 @@ class AdminThemesHandler extends AdminHandler
 		$areas = array();
 		if ( isset( $activedata['info']->areas->area ) ) {
 			foreach ( $activedata['info']->areas->area as $area ) {
-				$areas[(string)$area['name']] = (string)$area->description;
+				$detail = array();
+				if(isset($area['title'])) {
+					$detail['title'] = (string)$area['title'];
+				}
+				else {
+					$detail['title'] = (string)$area['name'];
+				}
+				$detail['description'] = (string)$area->description;
+				$areas[(string)$area['name']] = $detail;
 			}
 		}
 		$areas = Plugins::filter('areas', $areas, $scope);
@@ -353,6 +361,9 @@ class AdminThemesHandler extends AdminHandler
 		foreach($all_block_instances as $instance) {
 			if(isset($block_types[$instance->type])) {
 				$block_instances[] = $instance;
+			}
+			elseif(isset($dash_blocks[$instance->type])) {
+				// Do not add this dashboard block to the block instance list on the theme page
 			}
 			else {
 				$instance->invalid_message = _t('This data is for a block of type "%s", which is no longer provided by a theme or plugin.', array($instance->type));

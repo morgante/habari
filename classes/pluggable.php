@@ -59,7 +59,7 @@ abstract class Pluggable
 	/**
 	 * Get a fully-qualified URL directory that contains this pluggable class
 	 *
-	 * @param bool whether to include a trailing slash.  Default: No
+	 * @param bool|string $trail If true, include a trailing slash.  If string, append this to the requested url.  Default: Add nothing.
 	 * @return string URL
 	 */
 	public function get_url( $trail = false )
@@ -131,7 +131,7 @@ abstract class Pluggable
 			foreach ( (array) $hooks as $hook ) {
 				// make sure the method name is of the form
 				// action_foo or filter_foo of xmlrpc_foo or theme_foo
-				if ( preg_match( '#^(action|filter|xmlrpc|theme)_#i', $hook ) ) {
+				if ( preg_match( '#^(action|filter|xmlrpc|theme|rest)_#i', $hook ) ) {
 					$priority = 8;
 					if(isset($priorities[$hook])) {
 						$priority = $priorities[$hook];
@@ -147,13 +147,73 @@ abstract class Pluggable
 					if ( $type === 'xmlrpc' ) {
 						$hook = str_replace( '__', '.', $hook );
 					}
-					Plugins::register( array( $object, $fn ), $type, $hook, $priority );
-					if($object instanceof Pluggable) {
-						Plugins::register( array( $object, $fn ), $type, $hook . ':' . $object->plugin_id(), $priority );
+					if ( $type === 'rest' ) {
+						self::add_rest_rule($hook, $object, $fn);
+					}
+					else {
+						Plugins::register( array( $object, $fn ), $type, $hook, $priority );
+						if($object instanceof Pluggable) {
+							Plugins::register( array( $object, $fn ), $type, $hook . ':' . $object->plugin_id(), $priority );
+						}
 					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * Adds a RewriteRule to the REST handler for the rule provided
+	 * @param string $hook The hook name to add a RewriteRule for
+	 * @param Pluggable $object The pluggable object holding the hook
+	 * @param Callable $fn The hook function to use to dispatch the request
+	 */
+	protected static function add_rest_rule($hook, Pluggable $object, $fn)
+	{
+		$hook_ary = preg_split('#(?<!_)_#', $hook);
+
+		$verb = array_shift($hook_ary);
+
+		$hook_regex = '/^' . implode(
+			'\/',
+			array_map(
+				function($a){
+					if($a[0] === '_')
+						return '(?P<' . substr($a, 1) . '>[^\/]+)';
+					return $a;
+				},
+				$hook_ary
+			)
+		) . '\/?$/i';
+		$hook_build = implode(
+			'/',
+			array_map(
+				function($a){
+					if($a[0] === '_')
+						return '{$' . substr($a, 1) . '}';
+					return $a;
+				},
+				$hook_ary
+			)
+		);
+
+		$rule = new RewriteRule( array(
+			'name' => implode($hook_ary),
+			'parse_regex' => $hook_regex,
+			'build_str' => $hook_build,
+			'handler' => 'RestHandler',
+			'action' => 'rest',
+			'priority' => 1,
+			'is_active' => 1,
+			'rule_class' => RewriteRule::RULE_CUSTOM,
+			'description' => 'Rule to dispatch REST hook.',
+			'parameters' => array(
+				'verb' => $verb,
+				'hook' => array($object, $fn),
+			)
+		) );
+
+		$object->add_rule($rule, implode($hook_ary));
+
 	}
 
 	/**
@@ -184,6 +244,7 @@ abstract class Pluggable
 	public function _help_plugin_config( $actions, $plugin_id )
 	{
 		if ( $plugin_id == $this->plugin_id() ) {
+			// @locale Displayed as an icon indicating there is help text available for a plugin.
 			$actions['_help'] = _t( '?' );
 		}
 		return $actions;

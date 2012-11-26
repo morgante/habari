@@ -5,6 +5,8 @@
  *
  * Vocabulary is part of the taxonomy system. A vocabulary holds terms and has features.
  *
+ * @property-read array $features An array of the features this Vocabulary implements
+ *
  */
 
 class Vocabulary extends QueryRecord
@@ -363,7 +365,7 @@ class Vocabulary extends QueryRecord
 
 		// Insert the new node
 		$result = $new_term->insert();
-		if ( $result ) {
+		if( $result ) {
 			DB::commit();
 			return $new_term;
 		}
@@ -379,7 +381,7 @@ class Vocabulary extends QueryRecord
 	 * @param mixed $term A Term object, null (for the first node in the tree), a string (for a term slug or display), or an integer (for a Term ID).
 	 * @param string $term_class The class of the returned term object.
 	 * @return Term The Term object requested
-	 * @todo improve selective fetching by term slug vs term_display	 
+	 * @todo improve selective fetching by term slug vs term_display
 	 **/
 	public function get_term( $term = null, $term_class = 'Term' )
 	{
@@ -432,17 +434,8 @@ class Vocabulary extends QueryRecord
 	 *
 	 * @return boolean. Whether the associations were successful or not
 	 **/
-	public function set_object_terms( $object_type, $id, $terms )
+	public function set_object_terms( $object_type, $id, $terms = array() )
 	{
-		if ( ! isset( $object_type ) || ! isset( $id ) ) {
-			return false;
-		}
-
-		if ( ! isset( $terms ) || empty( $terms ) ) {
-			$terms = array();
-//			DB::query( "DELETE FROM {object_terms} WHERE object_id = :object_id AND object_type_id = :type_id", array( 'object_id' => $id, 'type_id' => Vocabulary::get_object_id( $object_type ) ) );
-//			return true;
-		}
 
 		// Make sure we have an array
 		$terms = new Terms( $terms );
@@ -455,7 +448,7 @@ class Vocabulary extends QueryRecord
 			if ( ! $new_term instanceof Term ) {
 				$new_term = $this->add_term( $term );
 			}
-			if ( ! array_key_exists( $new_term->id, $new_terms ) ) {
+			if ( ( $new_term != false ) && ( ! array_key_exists( $new_term->id, $new_terms ) ) ) {
 				$new_terms[$new_term->id] = $new_term;
 			}
 		}
@@ -637,7 +630,7 @@ SQL;
 
 	/**
 	 * Moves a term within the vocabulary. Returns a Term object. null parameters append the term to the end of any hierarchies.
-	 * 
+	 *
 	 * The MPTT operations can seem complex, but they're actually pretty simple:
 	 * 		1: Find our insertion point:
 	 * 			Either at the very end of the vocabulary, or before / after the given term
@@ -647,7 +640,7 @@ SQL;
 	 * 			We know the offset between the old point and the new point, so move the range up that number of spaces.
 	 * 		4: Close the original gap:
 	 * 			Now we've got all our terms moved, but we need to bump everything back down to close the gap it left, similar to #2.
-	 * 
+	 *
 	 * @param Term $term The term to move.
 	 * @param Term|null $target_term The term to move $term before or after, or null to move it to the very end of the vocabulary.
 	 * @param bool $before True to move $term BEFORE $target_term, false (the default) to move $term AFTER $target_term.
@@ -674,7 +667,7 @@ SQL;
 				$mptt_target = $mptt_target + 1;	// the left is one greater than the highest right
 			}
 			else {
-				
+
 				// if we're putting it before
 				if ( $before ) {
 					$mptt_target = $target_term->mptt_left;		// we're actually taking the place of the target term's left
@@ -682,7 +675,7 @@ SQL;
 				else {
 					$mptt_target = $target_term->mptt_right + 1;	// we just need to start at the next number
 				}
-				
+
 			}
 
 			// Create space in the tree for the insertion
@@ -704,10 +697,10 @@ SQL;
 				$source_left = $source_left + $range;
 				$source_right = $source_right + $range;
 			}
-			
+
 			// figure out how far our nodes are moving
 			$offset = $mptt_target - $source_left;
-			
+
 			// move our lucky nodes into the space we just created
 			$params = array( ':offset' => $offset, ':vocab_id' => $this->id, ':source_left' => $source_left, ':source_right' => $source_right );
 			$res = DB::query( '
@@ -723,7 +716,6 @@ SQL;
 				$params
 			);
 
-
 			// Close the gap in the tree created by moving those nodes out
 			$params = array( 'range' => $range, 'vocab_id' => $this->id, 'source_left' => $source_left );
 			$res = DB::query( 'UPDATE {terms} SET mptt_left = mptt_left - :range WHERE vocabulary_id = :vocab_id AND mptt_left > :source_left', $params );
@@ -731,14 +723,14 @@ SQL;
 				DB::rollback();
 				return false;
 			}
-			
+
 			$params = array( 'range' => $range, 'vocab_id' => $this->id, 'source_right' => $source_right );
 			$res = DB::query( 'UPDATE {terms} SET mptt_right = mptt_right - :range WHERE vocabulary_id = :vocab_id AND mptt_right > :source_right', $params );
 			if ( ! $res ) {
 				DB::rollback();
 				return false;
 			}
-			
+
 
 			// Success!
 			DB::commit();
@@ -784,32 +776,16 @@ SQL;
 		$post_ids = array();
 		$tag_names = array();
 
-		// get array of existing tags first to make sure we don't conflict with a new master tag
-		foreach ( $tags as $tag ) {
-
-			$posts = array();
-			$term = $this->get_term( $tag );
-
-			// get all the post ID's tagged with this tag
-			$posts = $term->objects( $object_type );
-
-			if ( count( $posts ) > 0 ) {
-				// merge the current post ids into the list of all the post_ids we need for the new tag
-				$post_ids = array_merge( $post_ids, $posts );
-			}
-
-			$tag_names[] = $tag;
-			if ( $tag != $master ) {
-				$this->delete_term( $term->id );
-			}
-		}
-
 		// get the master term
 		$master_term = $this->get_term( $master );
 
 		if ( !isset( $master_term->term ) ) {
 			// it didn't exist, so we assume it's tag text and create it
 			$master_term = $this->add_term( $master );
+
+			if( !$master_term ) {
+				return;
+			}
 
 			$master_ids = array();
 		}
@@ -819,27 +795,64 @@ SQL;
 
 		}
 
-		if ( count( $post_ids ) > 0 ) {
-			// only try and add the master tag to posts it's not already on
-			$post_ids = array_diff( $post_ids, $master_ids );
-		}
-		else {
-			$post_ids = $master_ids;
-		}
-		// link the master tag to each distinct post we removed tags from
-		foreach ( $post_ids as $post_id ) {
-			$master_term->associate( $object_type, $post_id );
+		// get array of existing tags first to make sure we don't conflict with a new master tag
+		foreach ( $tags as $tag ) {
+
+			// if this is the master tag, there's nothing to do
+			if ( $tag == $master ) {
+				continue;
+			}
+
+			$term = $this->get_term( $tag );
+
+			// get all the post ID's tagged with this tag
+			$posts = $term->objects( $object_type );
+
+			$ok_to_delete = true;
+
+			// if there actually are posts, let's link those up with the new tag now
+			if ( count( $posts ) > 0 ) {
+				// only try and add the master tag to posts it's not already on
+				$post_ids = array_diff( $posts, $master_ids );
+
+				foreach ( $post_ids as $post_id ) {
+					$r = $master_term->associate( $object_type, $post_id );
+
+					// if we failed linking this post, we can keep trying others, but don't delete this tag when finished
+					if ( $r == false ) {
+						$ok_to_delete = false;
+					}
+					else {
+						// otherwise, we did in fact merge a tag - make sure the tag is in the list of ones we merged
+						$tag_names[ $tag ] = $tag;
+
+						// and disassociate this post from the existing tag
+						$term->dissociate( $object_type, $post_id );
+					}
+
+				}
+			}
+
+			// if it's still ok to delete the tag entirely, do so
+			if ( $ok_to_delete ) {
+				$this->delete_term( $term->id );
+			}
+			else {
+				// otherwise, log a special message that we didn't delete it
+				EventLog::log( _t( 'Not all posts tagged "%1$s" could be reassigned to "%2$s". They have been left alone.', array( $tag, $master ) ), 'err', 'vocabulary', 'habari' );
+			}
+
 		}
 
 		EventLog::log( sprintf(
 			_n( 'Term %1$s in the %2$s vocabulary has been renamed to %3$s.',
 				'Terms %1$s in the %2$s vocabulary have been renamed to %3$s.',
 				count( $tags )
-			), implode( $tag_names, ', ' ), $this->name, $master ), 'info', 'vocabulary', 'habari'
+			), implode( ', ', $tag_names ), $this->name, $master ), 'info', 'vocabulary', 'habari'
 		);
 
 	}
-	
+
 
 	/**
 	 * Get the tags associated with this object
@@ -858,7 +871,7 @@ SQL;
 
 		return $terms;
 	}
-	
+
 
 	/**
 	 * Returns the count of times a tag is used.
