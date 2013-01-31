@@ -4,6 +4,8 @@
  *
  */
 
+namespace Habari;
+
 /**
  * Habari LogEntry class
  *
@@ -14,7 +16,7 @@
  * @property-read string $module The name of the module creating this entry
  * @property-read string type The name of the type of this entry
  * @property-read string $severity The name of the severity of this entry
- * @property-write mixed $timestamp The time of this entry. Can be a HabariDateTime object or a valid parameter for HabariDateTime::date_create()
+ * @property-write mixed $timestamp The time of this entry. Can be a DateTime object or a valid parameter for DateTime::create()
  */
 class LogEntry extends QueryRecord
 {
@@ -59,7 +61,7 @@ class LogEntry extends QueryRecord
 			'severity_id' => null,
 			'message' => '',
 			'data' => '',
-			'timestamp' => HabariDateTime::date_create(),
+			'timestamp' => DateTime::create(),
 			'ip' => 0,
 		);
 	}
@@ -87,7 +89,7 @@ class LogEntry extends QueryRecord
 			$this->fields['severity'] = 'info';
 		}
 		if ( isset( $this->fields['timestamp'] ) ) {
-			$this->fields['timestamp'] = HabariDateTime::date_create( $this->fields['timestamp'] );
+			$this->fields['timestamp'] = DateTime::create( $this->fields['timestamp'] );
 		}
 		$this->exclude_fields( 'id' );
 	}
@@ -95,7 +97,7 @@ class LogEntry extends QueryRecord
 	/**
 	 * Returns an associative array of LogEntry types
 	 *
-	 * @param bool whether to force a refresh of the cached values
+	 * @param bool $force whether to force a refresh of the cached values
 	 * @return array An array of log entry type names => integer values
 	 */
 	public static function list_logentry_types( $force = false )
@@ -123,7 +125,7 @@ class LogEntry extends QueryRecord
 
 	/**
 	 * Returns an array of LogEntry modules
-	 * @param bool Whether to refresh the cached values
+	 * @param bool $refresh Whether to refresh the cached values
 	 * @return array An array of LogEntry module id => name pairs
 	**/
 	public static function list_modules( $refresh = false )
@@ -136,7 +138,7 @@ class LogEntry extends QueryRecord
 
 	/**
 	 * Returns an array of LogEntry types
-	 * @param bool Whether to refresh the cached values
+	 * @param bool $refresh Whether to refresh the cached values
 	 * @return array An array of LogEntry id => name pairs
 	**/
 	public static function list_types( $refresh = false )
@@ -298,25 +300,25 @@ class LogEntry extends QueryRecord
 	}
 
 	/**
-	 * function delete
 	 * Deletes this logentry
 	 */
 	public function delete()
 	{
 		$allow = true;
 		$allow = Plugins::filter( 'logentry_delete_allow', $allow, $this );
-		if ( ! $allow ) {
-			return;
+		$result = false;
+		if ( $allow ) {
+			Plugins::act( 'logentry_delete_before', $this );
+			$result = parent::deleteRecord( DB::table( 'log' ), array( 'id'=>$this->id ) );
+			Plugins::act( 'logentry_delete_after', $this );
 		}
-		Plugins::act( 'logentry_delete_before', $this );
-		return parent::deleteRecord( DB::table( 'log' ), array( 'id'=>$this->id ) );
-		Plugins::act( 'logentry_delete_after', $this );
+		return $result;
 	}
 
 	/**
 	 * Overrides QueryRecord __get to implement custom object properties
 	 *
-	 * @param string Name of property to return
+	 * @param string $name Name of property to return
 	 * @return mixed The requested field value
 	 */
 	public function __get( $name )
@@ -354,15 +356,16 @@ class LogEntry extends QueryRecord
 	/**
 	 * Overrides QueryRecord __set to implement custom object properties
 	 *
-	 * @param string Name of property to return
+	 * @param string $name name of property to return
+	 * @param mixed $value The requested field value
 	 * @return mixed The requested field value
 	 */
 	public function __set( $name, $value )
 	{
 		switch ( $name ) {
 			case 'timestamp':
-				if ( !( $value instanceOf HabariDateTime ) ) {
-					$value = HabariDateTime::date_create( $value );
+				if ( !( $value instanceOf DateTime ) ) {
+					$value = DateTime::create( $value );
 				}
 				break;
 		}

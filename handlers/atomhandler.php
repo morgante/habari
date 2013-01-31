@@ -4,6 +4,10 @@
  *
  */
 
+namespace Habari;
+
+use \SimpleXMLElement as SimpleXMLElement;
+
 /**
  * Habari AtomHandler class
  * Produces Atom feeds and accepts Atom Publishing Protocol input
@@ -56,7 +60,7 @@ class AtomHandler extends ActionHandler
 	 * @param string $alternate the IRI of an alternate version.
 	 * @param string $self The preferred URI for retrieving Atom Feed Documents representing this Atom feed.
 	 * @param string $id a permanent, universally unique identifier for an the feed.
-	 * @param HabariDateTime $updated The most recent update in the collection to which this feed applies.
+	 * @param DateTime $updated The most recent update in the collection to which this feed applies.
 	 *
 	 * @return SimpleXMLElement The requested Atom document
 	 */
@@ -91,7 +95,7 @@ class AtomHandler extends ActionHandler
 		}
 
 		if ( $updated == null ) {
-			$feed_updated = $xml->addChild( 'updated', HabariDateTime::date_create()->get( 'c' ) );
+			$feed_updated = $xml->addChild( 'updated', DateTime::create()->get( 'c' ) );
 		}
 		else {
 			$feed_updated = $xml->addChild( 'updated', $updated->get( 'c' ) );
@@ -481,7 +485,7 @@ class AtomHandler extends ActionHandler
 		// Assign alternate link.
 		$alternate = '';
 
-		$updated = HabariDateTime::date_create();
+		$updated = DateTime::create();
 
 		// Check if this is a feed for a single post
 		if ( isset( $params['slug'] ) || isset( $params['id'] ) ) {

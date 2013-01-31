@@ -4,6 +4,7 @@
  *
  */
 
+namespace Habari;
 /**
  * Habari Options Class
  *
@@ -45,7 +46,7 @@ class Options extends Singleton
 			return $results;
 		}
 		
-		if ( self::instance()->$name ) {
+		if ( isset( self::instance()->$name ) ) {
 			return self::instance()->$name;
 		}
 		else {
@@ -207,6 +208,16 @@ class Options extends Singleton
 		return $option_value;
 	}
 
+	public function __isset ( $name ) {
+
+		if ( !isset( $this->options ) ) {
+			$this->get_all_options();
+		}
+
+		return isset( $this->options[ $name ] );
+
+	}
+
 	/**
 	 * Fetch all options from the options table into local storage
 	 */
@@ -221,7 +232,7 @@ class Options extends Singleton
 			$this->options = array_merge($this->options, Config::get('default_options'));
 		}
 		if(DB::is_connected()) {
-			$results = DB::get_results( 'SELECT name, value, type FROM {options}', array(), 'QueryRecord' );
+			$results = DB::get_results( 'SELECT name, value, type FROM {options}', array() );
 			foreach ( $results as $result ) {
 				if ( $result->type == 1 ) {
 					$this->options[$result->name] = unserialize( $result->value );
@@ -246,15 +257,19 @@ class Options extends Singleton
 		if ( ! isset( $this->options ) ) {
 			$this->get_all_options();
 		}
+
+		// if the option already exists and has the same value, there is nothing to update and we shouldn't waste a db hit
+		// i can't think of any negative implications of this, but that's no guarantee
+		if ( isset( $this->options[ $name ] ) && $this->options[ $name ] == $value ) {
+			return;
+		}
+
 		$value = Plugins::filter( 'option_set_value', $value, $name, isset( $this->options[$name] ) ? $this->options[$name] : null );
 		$this->options[$name] = $value;
 
-		if ( is_array( $value ) || is_object( $value ) ) {
-			$result = DB::update( DB::table( 'options' ), array( 'name' => $name, 'value' => serialize( $value ), 'type' => 1 ), array( 'name' => $name ) );
-		}
-		else {
-			$result = DB::update( DB::table( 'options' ), array( 'name' => $name, 'value' => $value, 'type' => 0 ), array( 'name' => $name ) );
-		}
+		// we now serialize everything, not just arrays and objects
+		$result = DB::update( DB::table( 'options' ), array( 'name' => $name, 'value' => serialize( $value ), 'type' => 1 ), array( 'name' => $name ) );
+
 		if ( Error::is_error( $result ) ) {
 			$result->out();
 			die();

@@ -1,4 +1,8 @@
-<?php if ( !defined( 'HABARI_PATH' ) ) { die( 'No direct access' ); }
+<?php
+
+namespace Habari;
+
+if ( !defined( 'HABARI_PATH' ) ) { die( 'No direct access' ); }
 
 /**
  * Create blocks commonly used by site owners.
@@ -205,10 +209,10 @@ class CoreBlocks extends Plugin
 
 		foreach ( $results as $result ) {
 			if ( $block->full_names ) {
-				$display_month = HabariDateTime::date_create()->set_date( $result->year, $result->month, 1 )->get( 'F' );
+				$display_month = DateTime::create()->set_date( $result->year, $result->month, 1 )->get( 'F' );
 			}
 			else {
-				$display_month = HabariDateTime::date_create()->set_date( $result->year, $result->month, 1 )->get( 'M' );
+				$display_month = DateTime::create()->set_date( $result->year, $result->month, 1 )->get( 'M' );
 			}
 
 			$count = '';

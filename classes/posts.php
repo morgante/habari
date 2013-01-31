@@ -4,6 +4,8 @@
  *
  */
 
+namespace Habari;
+
 /**
  * Habari Posts Class
  *
@@ -23,7 +25,7 @@
  * @property-read array $preset The presets for this object
  *
  */
-class Posts extends ArrayObject implements IsContent
+class Posts extends \ArrayObject implements IsContent
 {
 	public $get_param_cache; // Stores info about the last set of data fetched that was not a single value
 
@@ -134,8 +136,9 @@ class Posts extends ArrayObject implements IsContent
 			foreach($paramarray['preset'] as $presetname => $fallbackpreset) {
 				if(isset($presets[$fallbackpreset])) {
 					$preset = Plugins::filter('posts_get_update_preset', $presets[$fallbackpreset], $presetname, $paramarray);
-					if(is_array( $preset ) || $preset instanceof ArrayObject || $preset instanceof ArrayIterator) {
-						$paramarray = array_merge($preset, $paramarray);
+					if(is_array( $preset ) || $preset instanceof \ArrayObject || $preset instanceof \ArrayIterator) {
+						$preset = new SuperGlobal($preset);
+						$paramarray = $preset->merge($paramarray)->getArrayCopy();
 						break;
 					}
 				}
@@ -484,26 +487,26 @@ class Posts extends ArrayObject implements IsContent
 			 */
 			if ( isset( $paramset['day'] ) && isset( $paramset['month'] ) && isset( $paramset['year'] ) ) {
 				$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], $paramset['month'], $paramset['day'] );
-				$start_date = HabariDateTime::date_create( $start_date );
+				$start_date = DateTime::create( $start_date );
 				$where->add('pubdate BETWEEN :start_date AND :end_date', array('start_date' => $start_date->sql, 'end_date' => $start_date->modify( '+1 day -1 second' )->sql));
 			}
 			elseif ( isset( $paramset['month'] ) && isset( $paramset['year'] ) ) {
 				$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], $paramset['month'], 1 );
-				$start_date = HabariDateTime::date_create( $start_date );
+				$start_date = DateTime::create( $start_date );
 				$where->add('pubdate BETWEEN :start_date AND :end_date', array('start_date' => $start_date->sql, 'end_date' => $start_date->modify( '+1 month -1 second' )->sql));
 			}
 			elseif ( isset( $paramset['year'] ) ) {
 				$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], 1, 1 );
-				$start_date = HabariDateTime::date_create( $start_date );
+				$start_date = DateTime::create( $start_date );
 				$where->add('pubdate BETWEEN :start_date AND :end_date', array('start_date' => $start_date->sql, 'end_date' => $start_date->modify( '+1 year -1 second' )->sql));
 			}
 
 			if ( isset( $paramset['after'] ) ) {
-				$where->add('pubdate > :after_date', array('after_date' => HabariDateTime::date_create( $paramset['after'] )->sql));
+				$where->add('pubdate > :after_date', array('after_date' => DateTime::create( $paramset['after'] )->sql));
 			}
 
 			if ( isset( $paramset['before'] ) ) {
-				$where->add('pubdate < :before_date', array('before_date' => HabariDateTime::date_create( $paramset['before'] )->sql));
+				$where->add('pubdate < :before_date', array('before_date' => DateTime::create( $paramset['before'] )->sql));
 			}
 
 			// Concatenate the WHERE clauses
@@ -749,7 +752,7 @@ class Posts extends ArrayObject implements IsContent
 		/**
 		 * Execute the SQL statement using the PDO extension
 		 */
-		DB::set_fetch_mode( PDO::FETCH_CLASS );
+		DB::set_fetch_mode( \PDO::FETCH_CLASS );
 		$fetch_class = 'Post';
 		if(isset($paramarray['fetch_class'])) {
 			$fetch_class = $paramarray['fetch_class'];
@@ -952,7 +955,7 @@ class Posts extends ArrayObject implements IsContent
 			$select[$field] = "{posts}.$field AS $field";
 		}
 		$select = implode( ',', $select );
-		$posts = DB::get_results( 'SELECT ' . $select . ' FROM {posts} WHERE {posts}.status = ? AND {posts}.pubdate <= ? ORDER BY {posts}.pubdate DESC', array( Post::status( 'scheduled' ), HabariDateTime::date_create() ), 'Post' );
+		$posts = DB::get_results( 'SELECT ' . $select . ' FROM {posts} WHERE {posts}.status = ? AND {posts}.pubdate <= ? ORDER BY {posts}.pubdate DESC', array( Post::status( 'scheduled' ), DateTime::create() ), 'Post' );
 		foreach ( $posts as $post ) {
 			$post->publish();
 		}
@@ -972,7 +975,7 @@ class Posts extends ArrayObject implements IsContent
 
 		CronTab::delete_cronjob( 'publish_scheduled_posts' );
 		if ( $min_time ) {
-			CronTab::add_single_cron( 'publish_scheduled_posts', array( 'Posts', 'publish_scheduled_posts' ), $min_time, 'Next run: ' . HabariDateTime::date_create( $min_time )->get( 'c' ) );
+			CronTab::add_single_cron( 'publish_scheduled_posts', Method::create( '\Habari\Posts', 'publish_scheduled_posts' ), $min_time, 'Next run: ' . DateTime::create( $min_time )->get( 'c' ) );
 		}
 	}
 
@@ -1252,7 +1255,7 @@ class Posts extends ArrayObject implements IsContent
 	 */
 	public static function __static()
 	{
-		Pluggable::load_hooks('Posts');
+		Pluggable::load_hooks(__CLASS__);
 	}
 
 	/**

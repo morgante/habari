@@ -4,6 +4,8 @@
  *
  */
 
+namespace Habari;
+
 define( 'MIN_PHP_VERSION', '5.3.3' );
 
 /**
@@ -25,15 +27,15 @@ class InstallHandler extends ActionHandler
 		/**
 		 * Set user selected Locale or default
 		 */
-		$this->theme->locales = HabariLocale::list_all();
+		$this->theme->locales = Locale::list_all();
 		if ( isset( $_POST['locale'] ) && $_POST['locale'] != null ) {
-			HabariLocale::set( $_POST['locale'] );
+			Locale::set( $_POST['locale'] );
 		}
 		else {
-			HabariLocale::set( Config::get('locale', 'en-us' ) );
+			Locale::set( Config::get('locale', 'en-us' ) );
 		}
-		$this->theme->locale = HabariLocale::get();
-		$this->handler_vars['locale'] = HabariLocale::get();
+		$this->theme->locale = Locale::get();
+		$this->handler_vars['locale'] = Locale::get();
 
 		/**
 		 * Check .htaccess first because ajax doesn't work without it.
@@ -70,8 +72,8 @@ class InstallHandler extends ActionHandler
 		/**
 		 * Add the AJAX hooks
 		 */
-		Plugins::register( array( 'InstallHandler', 'ajax_check_mysql_credentials' ), 'ajax_', 'check_mysql_credentials' );
-		Plugins::register( array( 'InstallHandler', 'ajax_check_pgsql_credentials' ), 'ajax_', 'check_pgsql_credentials' );
+		Plugins::register( Method::create( '\Habari\InstallHandler', 'ajax_check_mysql_credentials' ), 'ajax_', 'check_mysql_credentials' );
+		Plugins::register( Method::create( '\Habari\InstallHandler', 'ajax_check_pgsql_credentials' ), 'ajax_', 'check_pgsql_credentials' );
 
 		/**
 		 * Let's check the config.php file if no POST data was submitted
@@ -350,7 +352,7 @@ class InstallHandler extends ActionHandler
 
 		if ( extension_loaded( 'pdo' ) ) {
 			/* Check for PDO drivers */
-			$pdo_drivers = PDO::getAvailableDrivers();
+			$pdo_drivers = \PDO::getAvailableDrivers();
 			if ( ! empty( $pdo_drivers ) ) {
 				$pdo_drivers = array_combine( $pdo_drivers, $pdo_drivers );
 				// Include only those drivers that we include database support for
@@ -783,10 +785,10 @@ class InstallHandler extends ActionHandler
 		}
 
 		// Add the cronjob to trim the log so that it doesn't get too big
-		CronTab::add_daily_cron( 'trim_log', array( 'EventLog', 'trim' ), _t( 'Trim the log table' ) );
-		
+		CronTab::add_daily_cron( 'trim_log', Method::create( '\Habari\EventLog', 'trim' ), _t( 'Trim the log table' ) );
+
 		// Add the cronjob to check for plugin updates
-		CronTab::add_daily_cron( 'update_check', array( 'Update', 'cron' ), _t( 'Perform a check for plugin updates.' ) );
+		CronTab::add_daily_cron( 'update_check', Method::create( '\Habari\Update', 'cron' ), _t( 'Perform a check for plugin updates.' ) );
 
 		return true;
 	}
@@ -1453,7 +1455,7 @@ class InstallHandler extends ActionHandler
 
 		// Auto-truncate the log table
 		if ( ! CronTab::get_cronjob( 'truncate_log' ) ) {
-			CronTab::add_daily_cron( 'truncate_log', array( 'Utils', 'truncate_log' ), _t( 'Truncate the log table' ) );
+			CronTab::add_daily_cron( 'truncate_log', Method::create( '\Habari\Utils', 'truncate_log' ), _t( 'Truncate the log table' ) );
 		}
 
 		return true;
@@ -1708,7 +1710,7 @@ class InstallHandler extends ActionHandler
 		CronTab::delete_cronjob( 'truncate_log' );
 		
 		// add the new trim_log cronjob
-		CronTab::add_daily_cron( 'trim_log', array( 'EventLog', 'trim' ), _t( 'Trim the log table' ) );
+		CronTab::add_daily_cron( 'trim_log', Method::create( '\Habari\EventLog', 'trim' ), _t( 'Trim the log table' ) );
 		
 	}
 	
@@ -1716,7 +1718,7 @@ class InstallHandler extends ActionHandler
 	{
 		
 		// Add the cronjob to check for plugin updates
-		CronTab::add_daily_cron( 'update_check', array( 'Update', 'cron' ), _t( 'Perform a check for plugin updates.' ) );
+		CronTab::add_daily_cron( 'update_check', Method::create( '\Habari\Update', 'cron' ), _t( 'Perform a check for plugin updates.' ) );
 		
 	}
 	
@@ -1784,6 +1786,42 @@ class InstallHandler extends ActionHandler
 		Options::set( 'public-GUID', $public );
 
 	}
+
+	private function upgrade_db_post_5106 ( ) {
+
+		// get all unserialized options from the db
+		// we do this manually just so things are cleaner
+		$results = DB::get_results( 'SELECT name, value, type FROM {options} where type = :type', array( 'type' => 0 ), 'QueryRecord' );
+
+		foreach ( $results as $result ) {
+			// simply save it again, no need to duplicate the query
+			Options::set( $result->name, $result->value );
+		}
+
+		// @todo i don't feel like seeing if we could properly handle removing the type column at the same time, so that should be done in a later version
+
+	}
+
+	private function upgrade_db_post_5107 ( ) {
+
+		// delete the current un-namespaced CronJobs by these names
+		CronTab::delete_cronjob( 'trim_log' );
+		CronTab::delete_cronjob( 'update_check' );
+
+		// we could have a bunch of the single update crons now, and there's no way to handle that using CronTab, so do it manually
+		$crons = DB::get_results( 'SELECT * FROM {crontab} WHERE name = ?', array( 'update_check_single' ), '\Habari\CronJob' );
+
+		foreach ( $crons as $cron ) {
+			$cron->delete();
+		}
+
+		// Add the cronjob to trim the log so that it doesn't get too big
+		CronTab::add_daily_cron( 'trim_log', Method::create( '\Habari\EventLog', 'trim' ), _t( 'Trim the log table' ) );
+
+		// Add the cronjob to check for plugin updates
+		CronTab::add_daily_cron( 'update_check', Method::create( '\Habari\Update', 'cron' ), _t( 'Perform a check for plugin updates.' ) );
+
+	}
 	
 	/**
 	 * Validate database credentials for MySQL
@@ -1791,7 +1829,7 @@ class InstallHandler extends ActionHandler
 	 */
 	public function ajax_check_mysql_credentials()
 	{
-		$xml = new SimpleXMLElement( '<response></response>' );
+		$xml = new \SimpleXMLElement( '<response></response>' );
 		// Missing anything?
 		if ( !isset( $_POST['host'] ) ) {
 			$xml->addChild( 'status', 0 );
@@ -1862,7 +1900,7 @@ class InstallHandler extends ActionHandler
 	 */
 	public function ajax_check_pgsql_credentials()
 	{
-		$xml = new SimpleXMLElement( '<response></response>' );
+		$xml = new \SimpleXMLElement( '<response></response>' );
 		// Missing anything?
 		if ( !isset( $_POST['host'] ) ) {
 			$xml->addChild( 'status', 0 );
@@ -1934,7 +1972,7 @@ class InstallHandler extends ActionHandler
 	public function ajax_check_sqlite_credentials()
 	{
 		$db_file = $_POST['file'];
-		$xml = new SimpleXMLElement( '<response></response>' );
+		$xml = new \SimpleXMLElement( '<response></response>' );
 		// Missing anything?
 		if ( !isset( $db_file ) ) {
 			$xml->addChild( 'status', 0 );
@@ -2021,7 +2059,7 @@ class InstallHandler extends ActionHandler
 
 	/**
 	 * Return a comma-separated list of features, given a SimpleXMLElement
-	 * @param SimpleXMLElement $features An element containing children of <feature>
+	 * @param \SimpleXMLElement $features An element containing children of <feature>
 	 * @return string A comma-separated list of those features
 	 */
 	public static function get_feature_list($features) {

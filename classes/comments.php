@@ -4,11 +4,13 @@
  *
  */
 
+namespace Habari;
+
 /**
  * Habari Comments Class
  *
  */
-class Comments extends ArrayObject
+class Comments extends \ArrayObject
 {
 	private $sort;
 
@@ -182,21 +184,21 @@ class Comments extends ArrayObject
 					/* Got the full date */
 					$where[] = 'date BETWEEN ? AND ?';
 					$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], $paramset['month'], $paramset['day'] );
-					$start_date = HabariDateTime::date_create( $start_date );
+					$start_date = DateTime::create( $start_date );
 					$params[] = $start_date->sql;
 					$params[] = $start_date->modify( '+1 day' )->sql;
 				}
 				elseif ( isset( $paramset['month'] ) ) {
 					$where[] = 'date BETWEEN ? AND ?';
 					$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], $paramset['month'], 1 );
-					$start_date = HabariDateTime::date_create( $start_date );
+					$start_date = DateTime::create( $start_date );
 					$params[] = $start_date->sql;
 					$params[] = $start_date->modify( '+1 month' )->sql;
 				}
 				elseif ( isset( $paramset['year'] ) ) {
 					$where[] = 'date BETWEEN ? AND ?';
 					$start_date = sprintf( '%d-%02d-%02d', $paramset['year'], 1, 1 );
-					$start_date = HabariDateTime::date_create( $start_date );
+					$start_date = DateTime::create( $start_date );
 					$params[] = $start_date->sql;
 					$params[] = $start_date->modify( '+1 year' )->sql;
 				}
@@ -365,7 +367,7 @@ class Comments extends ArrayObject
 		$query .= ( ( $orderby == '' ) ? '' : ' ORDER BY ' . $orderby ) . $limit;
 		//Utils::debug( $query, $params );
 
-		DB::set_fetch_mode( PDO::FETCH_CLASS );
+		DB::set_fetch_mode( \PDO::FETCH_CLASS );
 		DB::set_fetch_class( 'Comment' );
 		$results = DB::$fetch_fn( $query, $params, 'Comment' );
 

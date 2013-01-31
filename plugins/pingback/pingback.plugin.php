@@ -1,4 +1,8 @@
-<?php if ( !defined( 'HABARI_PATH' ) ) { die( 'No direct access' ); }
+<?php
+
+namespace Habari;
+
+if ( !defined( 'HABARI_PATH' ) ) { die( 'No direct access' ); }
 /**
  * Habari Pingback plugin, enables pingback support between sites.
  * @link http://www.hixie.ch/specs/pingback/pingback The Pingback spec
@@ -238,7 +242,7 @@ class Pingback extends Plugin
 				'ip'		=>	Utils::get_ip(),
 				'content'	=>	$source_excerpt,
 				'status'	=>	Comment::STATUS_UNAPPROVED,
-				'date'		=>	HabariDateTime::date_create(),
+				'date'		=>	DateTime::create(),
 				'type' 		=> 	Comment::PINGBACK,
 				) );
 

@@ -1,3 +1,4 @@
+<?php namespace Habari; ?>
 <?php if ( !defined( 'HABARI_PATH' ) ) { die('No direct access'); } ?>
 <!DOCTYPE HTML>
 <html>
@@ -13,8 +14,8 @@
 
 	<?php
 		Plugins::act( 'admin_header', $this );
-		Stack::out( 'admin_header_javascript', array('Stack', 'scripts') );
-		Stack::out( 'admin_stylesheet', array('Stack', 'styles') );
+		Stack::out( 'admin_header_javascript', Method::create('\\Habari\\Stack', 'scripts') );
+		Stack::out( 'admin_stylesheet', Method::create('\\Habari\\Stack', 'styles') );
 	?>
 
 </head>
@@ -59,7 +60,7 @@
 	<script type="text/javascript">
 	var password_label;
 	$(document).ready( function() {
-		<?php Session::messages_out( true, array( 'Format', 'humane_messages' ) ); ?>
+		<?php Session::messages_out( true, Method::create( '\Habari\Format', 'humane_messages' ) ); ?>
 		password_label = $('label[for=habari_password]');
 		// to fix autofill issues, we need to check the password field on every keyup
 		$('#habari_username').keyup( function() {

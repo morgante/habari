@@ -1,3 +1,4 @@
+<?php namespace Habari; ?>
 <article id="post-<?php echo $content->id; ?>" class="post" itemscope itemtype="http://schema.org/BlogPosting">
 
 	<header class="metadata">

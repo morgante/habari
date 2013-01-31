@@ -4,6 +4,8 @@
  *
  */
 
+namespace Habari;
+
 /**
  * Habari AdminCommentsHandler Class
  * Handles comment-related actions in the admin
@@ -163,7 +165,7 @@ class AdminCommentsHandler extends AdminHandler
 				$comment->email = $form->author_email;
 				$comment->ip = $form->author_ip;
 
-				$comment->date = HabariDateTime::date_create( $form->comment_date );
+				$comment->date = DateTime::create( $form->comment_date );
 				$comment->post_id = $form->comment_post;
 
 				if ( ! isset( $set_status ) ) {
@@ -536,7 +538,7 @@ class AdminCommentsHandler extends AdminHandler
 		$wsse = Utils::WSSE( $handler_vars['nonce'], $handler_vars['timestamp'] );
 		if ( $handler_vars['digest'] != $wsse['digest'] ) {
 			Session::error( _t( 'WSSE authentication failed.' ) );
-			echo Session::messages_get( true, array( 'Format', 'json_messages' ) );
+			echo Session::messages_get( true, Method::create( '\Habari\Format', 'json_messages' ) );
 			return;
 		}
 
@@ -551,7 +553,7 @@ class AdminCommentsHandler extends AdminHandler
 
 		if ( ( ! isset( $ids ) || empty( $ids ) ) && $handler_vars['action'] == 'delete' ) {
 			Session::notice( _t( 'No comments selected.' ) );
-			echo Session::messages_get( true, array( 'Format', 'json_messages' ) );
+			echo Session::messages_get( true, Method::create( '\Habari\Format', 'json_messages' ) );
 			return;
 		}
 

@@ -4,7 +4,8 @@
 	*
 	*/
 
-	/**
+namespace Habari;
+/**
 	 * Habari StackItem Class
 	 *
 	 * This class represents a single item that can be used as a component in Habari's stack output
@@ -14,8 +15,8 @@
 class StackItem
 {
 	static $items = array();
-	protected $dependencies = array();
-	protected $resource = '';
+	public $dependencies = array();
+	public $resource = '';
 
 	/**
 	 * Constructor for StackItem

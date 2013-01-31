@@ -4,15 +4,17 @@
  *
  */
 
+namespace Habari;
+
 /**
  * CronJob is a single cron task
  *
  * @property string $name The name of the cron job.
  * @property mixed $callback The callback function or plugin action for the cron job to execute.
- * @property HabariDateTime $start_time The time the cron job entry will begin executing.
- * @property HabariDateTime $end_time The time the cron job entry will end executing and delete.
- * @property HabariDateTime $last_run The time job was last run.
- * @property HabariDateTime $next_run The time the job will run next.
+ * @property DateTime $start_time The time the cron job entry will begin executing.
+ * @property DateTime $end_time The time the cron job entry will end executing and delete.
+ * @property DateTime $last_run The time job was last run.
+ * @property DateTime $next_run The time the job will run next.
  * @property int $increment The amount of time, in seconds, between each execution.
  * @property string $result The result of the last run. Either null, 'executed', or 'failed'.
  * @property string $description The description of the cron job.
@@ -46,9 +48,9 @@ class CronJob extends QueryRecord
 			'name' => '',
 			'callback' => '',
 			'last_run' => null,
-			'next_run' => HabariDateTime::date_create(),
+			'next_run' => DateTime::create(),
 			'increment' => 86400, // one day
-			'start_time' => HabariDateTime::date_create(),
+			'start_time' => DateTime::create(),
 			'end_time' => null,
 			'result' => '',
 			'cron_class' => self::CRON_CUSTOM,
@@ -67,7 +69,7 @@ class CronJob extends QueryRecord
 	 */
 	public function __construct( $paramarray = array() )
 	{
-		$this->now = HabariDateTime::date_create();
+		$this->now = DateTime::create();
 
 		// Defaults
 		$this->fields = array_merge(
@@ -138,8 +140,17 @@ class CronJob extends QueryRecord
 		}
 		else {
 			// this is not callable and doesn't look like one - it should simply be a textual plugin filter name
-			$result = true;
-			$result = Plugins::filter( $this->callback, $result, $paramarray );
+
+			// is this plugin filter actually implemented?
+			if ( Plugins::implemented( $this->callback, 'filter' ) ) {
+				// then run it and use that result
+				$result = true;
+				$result = Plugins::filter( $this->callback, $result, $paramarray );
+			}
+			else {
+				// the filter isn't implemented, consider that a failure
+				$result = false;
+			}
 		}
 
 		if ( $result === false ) {
@@ -192,8 +203,8 @@ class CronJob extends QueryRecord
 			case 'last_run':
 			case 'start_time':
 			case 'end_time':
-				if ( !( $value instanceOf HabariDateTime ) && ! is_null( $value ) ) {
-					$value = HabariDateTime::date_create( $value );
+				if ( !( $value instanceOf DateTime ) && ! is_null( $value ) ) {
+					$value = DateTime::create( $value );
 				}
 				break;
 		}
